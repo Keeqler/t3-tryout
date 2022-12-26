@@ -3,16 +3,12 @@ import * as yup from 'yup'
 import { protectedProcedure, router } from '../trpc'
 import { prisma } from '../../db/client'
 
-const voteIncrement = { up: 1, neutral: 0, down: -1 }
-
-type VoteType = 'up' | 'neutral' | 'down'
-
 export const voteRouter = router({
   votePost: protectedProcedure
     .input(
       yup.object({
         postId: yup.number().required(),
-        type: yup.string().required().oneOf(['up', 'down', 'neutral']),
+        increment: yup.number().required().oneOf([1, 0, -1]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -24,21 +20,21 @@ export const voteRouter = router({
       if (vote) {
         await prisma.vote.update({
           where: { id: vote.id },
-          data: { type: input.type },
+          data: { increment: input.increment },
         })
       } else {
         vote = await prisma.vote.create({
-          data: { type: input.type, postId: input.postId, voterId: ctx.session.user.id },
+          data: { increment: input.increment, postId: input.postId, voterId: ctx.session.user.id },
           include: { post: true },
         })
       }
 
-      const previousVote = voteIncrement[vote.type as VoteType]
-      const currentVote = voteIncrement[input.type as VoteType]
+      const previousIncrement = vote.increment
+      const currentIncrement = input.increment
       let voteCount = vote.post.voteCount
 
-      if (previousVote > currentVote) voteCount -= previousVote - currentVote
-      if (currentVote > previousVote) voteCount += currentVote - previousVote
+      if (previousIncrement > currentIncrement) voteCount -= previousIncrement - currentIncrement
+      if (currentIncrement > previousIncrement) voteCount += currentIncrement - previousIncrement
 
       await prisma.post.update({
         where: { id: input.postId },

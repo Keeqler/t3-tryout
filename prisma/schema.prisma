@@ -86,7 +86,7 @@ model Vote {
   createdAt DateTime @unique @default(now())
   updatedAt DateTime @updatedAt
 
-  type String
+  increment Int
 
   voterId Int
   voter   User @relation(fields: [voterId], references: [id], onDelete: Cascade)

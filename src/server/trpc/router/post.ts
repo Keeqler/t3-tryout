@@ -8,7 +8,16 @@ export const postRouter = router({
   create: protectedProcedure
     .input(z.object({ content: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await prisma.post.create({ data: { authorId: ctx.session.user.id, content: input.content } })
+      await prisma.post.create({
+        data: {
+          authorId: ctx.session.user.id,
+          content: input.content,
+          voteCount: 1,
+          votes: {
+            create: { increment: 1, voterId: ctx.session.user.id },
+          },
+        },
+      })
     }),
 
   infinitePosts: publicProcedure
@@ -29,6 +38,7 @@ export const postRouter = router({
           },
           votes: {
             where: { voterId: ctx.session?.user?.id },
+            select: { increment: true },
           },
         },
         take: limit + 1,
